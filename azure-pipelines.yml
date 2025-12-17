@@ -1,0 +1,65 @@
+# azure-pipelines.yml
+# Mirrors GH Actions: build+push to Docker Hub, then deploy to Web App for Containers
+
+trigger:
+- dev
+
+variables:
+  # ----- CI/CD settings -----
+  vmImageName: 'ubuntu-latest'
+  imageName: 'ai-ppp-app'
+  imageTag: 'latest'         # you can also deploy $(Build.BuildId) for immutability
+
+  # ----- Docker Hub (service connection of type "Docker Registry") -----
+  # Create it in Project Settings > Service connections, e.g., named 'dockerhub-conn'
+  dockerHubServiceConnection: 'dockerhub-conn'
+  dockerHubNamespace: 'pedromoraes20'
+
+  # ----- Azure -----
+  azureServiceConnectionId: '5886e81b-e0ca-472e-862c-98fac8fdd135'   # ARM service connection
+  webAppName: 'WEB-APP-AI-APP'        # use your dev/prod app name as needed
+  environmentName: 'WEB-APP-AI-APP-POC'
+
+stages:
+- stage: Build
+  displayName: Build & Push Docker image
+  jobs:
+  - job: BuildPush
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: Docker@2
+      displayName: Build & push to Docker Hub
+      inputs:
+        containerRegistry: $(dockerHubServiceConnection)
+        repository: $(dockerHubNamespace)/$(imageName)
+        command: buildAndPush
+        Dockerfile: $(Build.SourcesDirectory)/Dockerfile
+        tags: |
+          $(Build.BuildId)
+          $(imageTag)
+
+- stage: Deploy
+  displayName: Deploy to Azure Web App for Containers
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - deployment: DeployWebApp
+    environment: $(environmentName)
+    pool:
+      vmImage: $(vmImageName)
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureWebAppContainer@1
+            displayName: Deploy container image
+            inputs:
+              azureSubscription: $(azureServiceConnectionId)
+              appName: $(webAppName)
+              imageName: $(dockerHubNamespace)/$(imageName):$(imageTag)
+              # If your container listens on 8501 (Streamlit default), set WEBSITES_PORT:
+              appSettings: >
+                -WEBSITES_PORT 8000
+                -WEBSITES_CONTAINER_START_TIME_LIMIT 1800
+

@@ -1,0 +1,18 @@
+# frontend requirements
+streamlit==1.50.0
+requests>=2.31.0
+
+# backend requirements
+flask==3.0.3
+python-dotenv>=1.0.1
+openai==2.3.0
+watchdog==6.0.0
+pdfminer.six==20250506
+docxtpl==0.16.3
+azure.identity==1.23.0
+azure.storage.blob==12.26.0
+markdown2==2.4.13
+html2docx==1.5.0
+markdown==3.6
+beautifulsoup4==4.12.3
+python-docx==1.1.2

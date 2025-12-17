@@ -1,0 +1,47 @@
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: app/backend/Dockerfile
+    ports:
+      - "8501:8501"
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - PYTHONUNBUFFERED=1
+    env_file:
+      - .env
+    volumes:
+      - type: bind
+        source: ./app/backend
+        target: /app
+      - type: bind
+        source: ./.env
+        target: /app/.env
+    working_dir: /app
+    networks:
+      - app-network
+
+
+  frontend:
+    build:
+      context: .
+      dockerfile: app/streamlit/Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      - backend
+    environment:
+      - BACKEND_URL=http://backend:8501
+    volumes:
+      - type: bind
+        source: ./app/streamlit
+        target: /app
+    working_dir: /app
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
